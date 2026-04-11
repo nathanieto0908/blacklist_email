@@ -50,17 +50,20 @@ class BlacklistCreate(Resource):
 # GET /blacklists/<email>
 class BlacklistCheck(Resource):
 
-    @jwt_required()
+    @simple_token_required
     def get(self, email):
-        entry = Blacklist.query.filter_by(email=email).first()
-
-        if not entry:
-            return {
-                "is_blacklisted": False,
-                "blocked_reason": None
-            }, 200
-
-        return {
-            "is_blacklisted": True,
-            "blocked_reason": entry.blocked_reason
-        }, 200
+        try:
+            entry = Blacklist.query.filter_by(email=email).first()
+            if entry:
+                return {
+                    "blocked": True,
+                    "blocked_reason": entry.blocked_reason or "Sin motivo especificado"
+                }, 200
+            else:
+                return {
+                    "blocked": False,
+                    "blocked_reason": None
+                }, 200
+        except Exception as e:
+            return {"message": str(e)}, 500
+    
