@@ -1,0 +1,364 @@
+﻿{
+    "info":  {
+                 "name":  "Blacklist Email API - Entrega 1",
+                 "description":  "Coleccion para validar el microservicio Blacklist Email de AWS Elastic Beanstalk.\n\nUso rapido:\n1. Importar esta coleccion en Postman.\n2. Ajustar variables de coleccion: staticToken.\n3. Ejecutar la carpeta de flujo feliz y luego casos de error.\n\nEsta coleccion incluye pruebas automaticas (tests) para confirmar codigos HTTP y estructura de respuestas.",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "auth":  {
+                 "type":  "bearer",
+                 "bearer":  [
+                                {
+                                    "key":  "token",
+                                    "value":  "{{staticToken}}",
+                                    "type":  "string"
+                                }
+                            ]
+             },
+    "variable":  [
+                     {
+                         "key":  "baseUrl",
+                         "value":  "http://blacklist-email-env.eba-53gmwwrv.us-east-1.elasticbeanstalk.com",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "staticToken",
+                         "value":  "token-local-dev",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "newEmail",
+                         "value":  "js.borrero@uniandes.edu.co",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "sampleAppUuid",
+                         "value":  "550e8400-e29b-41d4-a716-446655440000",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "createdEmail",
+                         "value":  "",
+                         "type":  "string"
+                     }
+                 ],
+    "item":  [
+                 {
+                     "name":  "01 - Salud",
+                     "description":  "Validacion de disponibilidad del servicio.",
+                     "item":  [
+                                  {
+                                      "name":  "GET /health",
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "noauth"
+                                                               },
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/health",
+                                                      "description":  "Endpoint de health check. Debe responder 200 con {\"status\":\"healthy\"}."
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 200\u0027, function () {",
+                                                                                    "  pm.response.to.have.status(200);",
+                                                                                    "});",
+                                                                                    "pm.test(\u0027Body contiene status=healthy\u0027, function () {",
+                                                                                    "  var data = pm.response.json();",
+                                                                                    "  pm.expect(data.status).to.eql(\u0027healthy\u0027);",
+                                                                                    "});"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "02 - Lista negra (flujo feliz)",
+                     "description":  "Flujo principal: crear registro en lista negra y luego consultarlo.",
+                     "item":  [
+                                  {
+                                      "name":  "POST /blacklists - crear registro",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"email\": \"{{newEmail}}\",\n  \"app_uuid\": \"{{sampleAppUuid}}\",\n  \"blocked_reason\": \"Fraude\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/blacklists",
+                                                      "description":  "Crea un correo en lista negra global. Requiere Bearer token."
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 201\u0027, function () {",
+                                                                                    "  pm.response.to.have.status(201);",
+                                                                                    "});",
+                                                                                    "pm.test(\u0027Respuesta contiene message y data\u0027, function () {",
+                                                                                    "  var data = pm.response.json();",
+                                                                                    "  pm.expect(data).to.have.property(\u0027message\u0027);",
+                                                                                    "  pm.expect(data).to.have.property(\u0027data\u0027);",
+                                                                                    "});",
+                                                                                    "pm.collectionVariables.set(\u0027createdEmail\u0027, pm.variables.replaceIn(\u0027{{newEmail}}\u0027));"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "GET /blacklists/:email - existe en lista",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/blacklists/{{createdEmail}}",
+                                                      "description":  "Consulta el correo creado en el request anterior."
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "prerequest",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "if (!pm.collectionVariables.get(\u0027createdEmail\u0027)) {",
+                                                                                    "  pm.collectionVariables.set(\u0027createdEmail\u0027, pm.collectionVariables.get(\u0027newEmail\u0027));",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    },
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 200\u0027, function () {",
+                                                                                    "  pm.response.to.have.status(200);",
+                                                                                    "});",
+                                                                                    "pm.test(\u0027is_blacklisted=true\u0027, function () {",
+                                                                                    "  var data = pm.response.json();",
+                                                                                    "  pm.expect(data.is_blacklisted).to.eql(true);",
+                                                                                    "});"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "GET /blacklists/:email - no existe",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/blacklists/no-existe@empresa.com",
+                                                      "description":  "Valida respuesta cuando el correo no esta en lista negra."
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 200\u0027, function () {",
+                                                                                    "  pm.response.to.have.status(200);",
+                                                                                    "});",
+                                                                                    "pm.test(\u0027is_blacklisted=false y blocked_reason null\u0027, function () {",
+                                                                                    "  var data = pm.response.json();",
+                                                                                    "  pm.expect(data.is_blacklisted).to.eql(false);",
+                                                                                    "  pm.expect(data.blocked_reason).to.eql(null);",
+                                                                                    "});"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "03 - Casos de error",
+                     "description":  "Validaciones y autorizacion.",
+                     "item":  [
+                                  {
+                                      "name":  "POST /blacklists - sin auth (401)",
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "noauth"
+                                                               },
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"email\": \"sin.auth@empresa.com\",\n  \"app_uuid\": \"550e8400-e29b-41d4-a716-446655440000\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/blacklists"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 401\u0027, function () {",
+                                                                                    "  pm.response.to.have.status(401);",
+                                                                                    "});",
+                                                                                    "pm.test(\u0027Mensaje Unauthorized\u0027, function () {",
+                                                                                    "  var data = pm.response.json();",
+                                                                                    "  pm.expect(data.message).to.eql(\u0027Unauthorized\u0027);",
+                                                                                    "});"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "POST /blacklists - app_uuid invalido (400)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"email\": \"uuid.invalido@empresa.com\",\n  \"app_uuid\": \"no-es-uuid\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/blacklists"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 400\u0027, function () {",
+                                                                                    "  pm.response.to.have.status(400);",
+                                                                                    "});",
+                                                                                    "pm.test(\u0027Mensaje menciona UUID\u0027, function () {",
+                                                                                    "  var data = pm.response.json();",
+                                                                                    "  pm.expect(data.message).to.include(\u0027UUID\u0027);",
+                                                                                    "});"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "POST /blacklists - blocked_reason \u003e 255 (400)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n  \"email\": \"reason.largo@empresa.com\",\n  \"app_uuid\": \"550e8400-e29b-41d4-a716-446655440001\",\n  \"blocked_reason\": \"{{longReason}}\"\n}"
+                                                               },
+                                                      "url":  "{{baseUrl}}/blacklists"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "prerequest",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.collectionVariables.set(\u0027longReason\u0027, \u0027x\u0027.repeat(256));"
+                                                                                ]
+                                                                   }
+                                                    },
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 400\u0027, function () {",
+                                                                                    "  pm.response.to.have.status(400);",
+                                                                                    "});",
+                                                                                    "pm.test(\u0027Mensaje menciona blocked_reason\u0027, function () {",
+                                                                                    "  var data = pm.response.json();",
+                                                                                    "  pm.expect(data.message).to.include(\u0027blocked_reason\u0027);",
+                                                                                    "});"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "GET /blacklists/:email - sin auth (401)",
+                                      "request":  {
+                                                      "auth":  {
+                                                                   "type":  "noauth"
+                                                               },
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  "{{baseUrl}}/blacklists/privado@empresa.com"
+                                                  },
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "pm.test(\u0027Status 401\u0027, function () {",
+                                                                                    "  pm.response.to.have.status(401);",
+                                                                                    "});"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 }
+             ]
+}

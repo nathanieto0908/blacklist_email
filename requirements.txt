@@ -1,6 +1,11 @@
-Flask
-flask-restful
-flask-sqlalchemy
-flask-marshmallow
-marshmallow-sqlalchemy
-flask-jwt-extended
+Flask>=2.3,<3.0
+flask-restful>=0.3.10
+flask-sqlalchemy>=3.1
+flask-marshmallow>=0.15
+marshmallow-sqlalchemy>=0.30
+flask-jwt-extended>=4.6
+Werkzeug>=2.3
+psycopg2-binary>=2.9
+gunicorn>=21.2
+python-dotenv>=1.0
+pytest>=7.0
