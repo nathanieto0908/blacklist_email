@@ -28,7 +28,7 @@ jobs:
         run: zip -r artefacto.zip . --exclude="*.git*" --exclude="instance/*" --exclude="__pycache__/*" --exclude="*.pyc"
 
       - name: Subir artefacto
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: blacklist-artefacto
           path: artefacto.zip
