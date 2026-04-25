@@ -1,0 +1,24 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      - echo "=== Instalando dependencias ==="
+      - pip install -r requirements.txt
+
+  pre_build:
+    commands:
+      - echo "=== Ejecutando pruebas unitarias ==="
+      - pytest tests/ -v
+
+  build:
+    commands:
+      - echo "=== Generando artefacto ==="
+      - zip -r artefacto.zip . -x "*.git*" -x "instance/*" -x "__pycache__/*" -x "*.pyc"
+
+artifacts:
+  files:
+    - artefacto.zip
+  discard-paths: yes
