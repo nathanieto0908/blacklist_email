@@ -1,0 +1,34 @@
+name: CI Pipeline - Blacklist Email
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Obtener código del repositorio
+        uses: actions/checkout@v3
+
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Ejecutar pruebas unitarias
+        run: pytest tests/ -v
+
+      - name: Generar artefacto
+        run: zip -r artefacto.zip . --exclude="*.git*" --exclude="instance/*" --exclude="__pycache__/*" --exclude="*.pyc"
+
+      - name: Subir artefacto
+        uses: actions/upload-artifact@v3
+        with:
+          name: blacklist-artefacto
+          path: artefacto.zip
