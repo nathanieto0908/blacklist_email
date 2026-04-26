@@ -33,14 +33,18 @@ def create_blacklist(email, app_uuid, blocked_reason, repo, ip_address=None):
         "message": "Email agregado a lista negra exitosamente"
     }
 
-
 def get_blacklist(email, repo):
     record = repo.get(email)
 
     if not record:
         return False, None
 
+    # soporta dict (tests) y objeto (DB real)
+    if isinstance(record, dict):
+        return True, record.get("blocked_reason")
+
     return True, record.blocked_reason
+
 
 class BlacklistRepo:
     def exists(self, email):
