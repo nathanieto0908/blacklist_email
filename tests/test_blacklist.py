@@ -16,7 +16,7 @@ def test_t01_post_blacklist_complete_201(client, auth_headers):
         content_type='application/json',
         headers=auth_headers,
     )
-    assert response.status_code == 201
+    assert response.status_code == 999
     data = response.get_json()
     assert 'message' in data
     assert data['message'] == 'Email agregado a lista negra exitosamente'
