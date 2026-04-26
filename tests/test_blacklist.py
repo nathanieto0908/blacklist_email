@@ -182,30 +182,89 @@ def test_t12_get_invalid_token_401(client, bad_headers):
     assert response.get_json()['message'] == 'Unauthorized'
  
 #  Unitaries test
-def create_blacklist(email, app_uuid, blocked_reason, repo):
-    if not email:
-        raise ValueError("Email requerido")
-
-    if not app_uuid:
-        raise ValueError("UUID requerido")
-
-    if blocked_reason and len(blocked_reason) > 255:
-        raise ValueError("blocked_reason muy largo")
-
-    if repo.exists(email):
-        raise ValueError("Email ya existe")
-
-    repo.save(email, app_uuid, blocked_reason)
-
-    return {
-        "message": "Email agregado a lista negra exitosamente"
-    }
+import pytest
+from unittest.mock import Mock
 
 
-def get_blacklist(email, repo):
-    record = repo.get(email)
+def test_unit_create_blacklist_ok():
+    repo = Mock()
+    repo.exists.return_value = False
 
-    if record:
-        return True, record["blocked_reason"]
+    result = create_blacklist(
+        "unit@test.com",
+        "550e8400-e29b-41d4-a716-446655440000",
+        "fraude",
+        repo
+    )
 
-    return False, None
+    assert result["message"] == "Email agregado a lista negra exitosamente"
+    repo.save.assert_called_once()
+
+
+def test_unit_create_blacklist_missing_email():
+    repo = Mock()
+
+    with pytest.raises(ValueError):
+        create_blacklist(
+            None,
+            "uuid",
+            None,
+            repo
+        )
+
+
+def test_unit_create_blacklist_missing_uuid():
+    repo = Mock()
+
+    with pytest.raises(ValueError):
+        create_blacklist(
+            "test@test.com",
+            None,
+            None,
+            repo
+        )
+
+
+def test_unit_blocked_reason_too_long():
+    repo = Mock()
+
+    with pytest.raises(ValueError):
+        create_blacklist(
+            "test@test.com",
+            "uuid",
+            "x" * 300,
+            repo
+        )
+
+
+def test_unit_duplicate_email():
+    repo = Mock()
+    repo.exists.return_value = True
+
+    with pytest.raises(ValueError):
+        create_blacklist(
+            "test@test.com",
+            "uuid",
+            None,
+            repo
+        )
+
+
+def test_unit_get_blacklisted_true():
+    repo = Mock()
+    repo.get.return_value = {"blocked_reason": "spam"}
+
+    result, reason = get_blacklist("test@test.com", repo)
+
+    assert result is True
+    assert reason == "spam"
+
+
+def test_unit_get_blacklisted_false():
+    repo = Mock()
+    repo.get.return_value = None
+
+    result, reason = get_blacklist("test@test.com", repo)
+
+    assert result is False
+    assert reason is None
