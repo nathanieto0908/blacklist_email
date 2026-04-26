@@ -1,5 +1,8 @@
 import json
+import pytest
+from unittest.mock import Mock
 
+from resources.blacklist import create_blacklist, get_blacklist
 
 def test_t01_post_blacklist_complete_201(client, auth_headers):
     payload = {
