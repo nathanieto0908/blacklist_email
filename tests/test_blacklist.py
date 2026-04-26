@@ -31,7 +31,7 @@ def test_t02_post_without_blocked_reason_201(client, auth_headers):
         content_type='application/json',
         headers=auth_headers,
     )
-    assert response.status_code == 201
+    assert response.status_code == 999
     data = response.get_json()
     assert 'message' in data
 
@@ -180,3 +180,4 @@ def test_t12_get_invalid_token_401(client, bad_headers):
     response = client.get('/blacklists/x@y.com', headers=bad_headers)
     assert response.status_code == 401
     assert response.get_json()['message'] == 'Unauthorized'
+ 
