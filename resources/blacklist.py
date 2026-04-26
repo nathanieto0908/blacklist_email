@@ -13,6 +13,53 @@ def _normalize_app_uuid(value):
     except (ValueError, AttributeError, TypeError):
         return None
 
+def create_blacklist(email, app_uuid, blocked_reason, repo, ip_address=None):
+    if not email or not app_uuid:
+        raise ValueError("email y app_uuid son obligatorios")
+
+    app_uuid_norm = _normalize_app_uuid(app_uuid)
+    if app_uuid_norm is None:
+        raise ValueError("UUID inválido")
+
+    if blocked_reason and len(blocked_reason) > 255:
+        raise ValueError("blocked_reason muy largo")
+
+    if repo.exists(email):
+        raise ValueError("Email ya existe")
+
+    repo.save(email, app_uuid_norm, blocked_reason, ip_address)
+
+    return {
+        "message": "Email agregado a lista negra exitosamente"
+    }
+
+
+def get_blacklist(email, repo):
+    record = repo.get(email)
+
+    if not record:
+        return False, None
+
+    return True, record.blocked_reason
+
+class BlacklistRepo:
+    def exists(self, email):
+        return Blacklist.query.filter_by(email=email).first() is not None
+
+    def save(self, email, app_uuid, reason, ip):
+        entry = Blacklist(
+            email=email,
+            app_uuid=app_uuid,
+            blocked_reason=reason,
+            ip_address=ip,
+        )
+        db.session.add(entry)
+        db.session.commit()
+
+    def get(self, email):
+        return Blacklist.query.filter_by(email=email).first()
+
+
 
 class BlacklistCreate(Resource):
     @simple_token_required
@@ -23,45 +70,33 @@ class BlacklistCreate(Resource):
         app_uuid = data.get('app_uuid')
         reason = data.get('blocked_reason')
 
-        if not email or not app_uuid:
-            return {'message': 'email y app_uuid son obligatorios'}, 400
-
-        app_uuid_norm = _normalize_app_uuid(app_uuid)
-        if app_uuid_norm is None:
-            return {'message': 'app_uuid debe ser un UUID válido'}, 400
-
-        if reason and len(reason) > 255:
-            return {'message': 'blocked_reason no puede superar 255 caracteres'}, 400
-
-        existing = Blacklist.query.filter_by(email=email).first()
-        if existing:
-            return {'message': 'El email ya se encuentra en la lista negra'}, 400
-
         ip_address = (
             request.headers.get('X-Forwarded-For', request.remote_addr)
             .split(',')[0]
             .strip()
         )
 
-        entry = Blacklist(
-            email=email,
-            app_uuid=app_uuid_norm,
-            blocked_reason=reason,
-            ip_address=ip_address,
-        )
-        db.session.add(entry)
-        db.session.commit()
+        repo = BlacklistRepo()
+
+        try:
+            create_blacklist(email, app_uuid, reason, repo, ip_address)
+        except ValueError as e:
+            return {"message": str(e)}, 400
+
+        entry = repo.get(email)
 
         return {
             'message': 'Email agregado a lista negra exitosamente',
             'data': blacklist_schema.dump(entry),
         }, 201
-
-
 class BlacklistCheck(Resource):
     @simple_token_required
     def get(self, email):
-        entry = Blacklist.query.filter_by(email=email).first()
-        if not entry:
-            return {'is_blacklisted': False, 'blocked_reason': None}, 200
-        return {'is_blacklisted': True, 'blocked_reason': entry.blocked_reason}, 200
+        repo = BlacklistRepo()
+
+        is_blacklisted, reason = get_blacklist(email, repo)
+
+        return {
+            'is_blacklisted': is_blacklisted,
+            'blocked_reason': reason
+        }, 200
