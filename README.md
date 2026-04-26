@@ -73,3 +73,4 @@ python -m pytest tests/ -v
 ## Despliegue (resumen)
 
 El proyecto esta preparado para AWS Elastic Beanstalk usando `Procfile` y Gunicorn. Para desplegar, configura en el entorno de EB las variables `DATABASE_URL`, `JWT_SECRET_KEY` y `STATIC_TOKEN`.
+ 
