@@ -31,7 +31,7 @@ def test_t02_post_without_blocked_reason_201(client, auth_headers):
         content_type='application/json',
         headers=auth_headers,
     )
-    assert response.status_code == 999
+    assert response.status_code == 201
     data = response.get_json()
     assert 'message' in data
 
