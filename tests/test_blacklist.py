@@ -180,3 +180,32 @@ def test_t12_get_invalid_token_401(client, bad_headers):
     response = client.get('/blacklists/x@y.com', headers=bad_headers)
     assert response.status_code == 401
     assert response.get_json()['message'] == 'Unauthorized'
+ 
+#  Unitaries test
+def create_blacklist(email, app_uuid, blocked_reason, repo):
+    if not email:
+        raise ValueError("Email requerido")
+
+    if not app_uuid:
+        raise ValueError("UUID requerido")
+
+    if blocked_reason and len(blocked_reason) > 255:
+        raise ValueError("blocked_reason muy largo")
+
+    if repo.exists(email):
+        raise ValueError("Email ya existe")
+
+    repo.save(email, app_uuid, blocked_reason)
+
+    return {
+        "message": "Email agregado a lista negra exitosamente"
+    }
+
+
+def get_blacklist(email, repo):
+    record = repo.get(email)
+
+    if record:
+        return True, record["blocked_reason"]
+
+    return False, None
